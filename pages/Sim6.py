@@ -19,19 +19,18 @@ df['actual_end'] = df.apply(lambda x: datetime.now() if pd.isna(x['actual_end'])
 
 # --- App Structure ---
 st.title("Resource Allocation and Planning")
-
-# User Input
-selected_client = st.sidebar.selectbox("Select Client", df['client'].unique())
-
-# Calculations
-def calculate_metrics(df, selected_client):
-    # ... (Your calculation logic, same as before)
-
-total_planned, total_actual, to_allocate, monthly_allocation = calculate_metrics(df.copy(), selected_client)
-
 # Display Metrics
 st.header("Metrics")
 st.metric("Total Resources Planned", total_planned)
 st.metric("Total Resources Used", total_actual)
 st.metric("Resources to Allocate (Remaining Year)", to_allocate)
 st.metric("Recommended Monthly Allocation", monthly_allocation) 
+
+# User Input
+selected_client = st.sidebar.selectbox("Select Client", df['client'].unique())
+
+# Calculations
+#def calculate_metrics(df, selected_client):
+    # ... (Your calculation logic, same as before)
+
+#total_planned, total_actual, to_allocate, monthly_allocation = calculate_metrics(df.copy(), selected_client)
