@@ -14,6 +14,8 @@ data = {
 }
 df = pd.DataFrame(data)
 
+df['months_used'] = (df['actual_end'].dt.to_period('M') - df['actual_start'].dt.to_period('M')) + 1
+
 df['actual_start'] = df['planned_start'].where(df['planned_start'] > datetime.now(), datetime.now())
 df['actual_end'] = df.apply(lambda x: datetime.now() if pd.isna(x['actual_end']) else x['actual_end'], axis=1)
 
