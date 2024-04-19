@@ -26,7 +26,21 @@ st.title("Resource Allocation and Planning")
 selected_client = st.sidebar.selectbox("Select Client", df['client'].unique())
 
 # Calculations
+
+# ... (rest of the code)
+
+# Calculations
+
+
+
 def calculate_metrics(df, selected_client):
+    # Ensure actual_end is always populated
+    df['actual_end'] = df.apply(lambda x: datetime.now() if pd.isna(x['actual_end']) else x['actual_end'], axis=1)
+
+    # Now calculate the months used
+    df['months_used'] = (df['actual_end'].dt.to_period('M') - df['actual_start'].dt.to_period('M')) + 1
+
+    # ... (rest of the calculations) 
     client_data = df[df['client'] == selected_client]
     total_planned = client_data['resources_planned'].sum()
 
@@ -37,6 +51,7 @@ def calculate_metrics(df, selected_client):
     remaining_months = 12 - datetime.now().month  
     resources_to_allocate = max(0, total_planned - total_actual) 
     monthly_allocation = resources_to_allocate / remaining_months
+    
 
     return total_planned, total_actual, resources_to_allocate, monthly_allocation
 
