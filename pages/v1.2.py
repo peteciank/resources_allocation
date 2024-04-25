@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 
 st.title("Resource Allocation Simulator")
 
-# Sidebar for user inputs
-st.sidebar.title('Edit Resource Details')
-
 # Pre-populated dataframe with roles, seniorities, rates, and quantities
 data = {
     'Role': ['Project Manager', 'Project Manager', 'Project Manager',
@@ -18,71 +15,49 @@ data = {
     'Rate': [60, 45, 25, 65, 45, 25, 65, 45, 25, 65, 45, 25, 80, 50, 35],
     'Quantity': [3, 6, 7, 3, 6, 7, 3, 6, 7, 3, 6, 7, 3, 6, 7]
 }
-
 df = pd.DataFrame(data)
 
-# Store dataframe in session state if it is not already there
 if 'editable_df' not in st.session_state:
     st.session_state['editable_df'] = df.copy()
 
-# Function to update the dataframe with new values
-def update_values():
-    index = st.session_state['index']
-    st.session_state['editable_df'].loc[index, 'Rate'] = st.sidebar.number_input('Rate USD/hour', value=current_rate)
-    st.session_state['editable_df'].loc[index, 'Quantity'] = st.sidebar.number_input('Quantity', value=current_quantity)
-    update_calculations()
+st.sidebar.title('Resource Details')
 
-# Function to recalculate the forecast and invoice amount
-def update_calculations():
-    total_invoice_amount = (st.session_state['editable_df']['Rate'] * st.session_state['editable_df']['Quantity']).sum()
-    invoice_progression = total_invoice_amount * (pd.Timestamp.now().month / 12)
-    forecast = total_invoice_amount * (12 - pd.Timestamp.now().month) / 12
-    
-    # Update the total invoice amount and forecast in session state
-    st.session_state['total_invoice_amount'] = total_invoice_amount
-    st.session_state['forecast'] = forecast
-    st.session_state['invoice_progression'] = invoice_progression
+selected_role = st.sidebar.selectbox('Select Role', options=df['Role'].unique())
+selected_seniority = st.sidebar.selectbox('Select Seniority', options=df['Seniority'].unique())
 
-    # Update the chart
-    display_progression_chart(invoice_progression)
+# Update the rate and quantity based on the user's selection
+mask = (st.session_state.editable_df['Role'] == selected_role) & (st.session_state.editable_df['Seniority'] == selected_seniority)
+selected_index = st.session_state.editable_df.index[mask].tolist()
+if selected_index:
+    selected_index = selected_index[0]
+    rate = st.sidebar.number_input('Rate USD/hour', value=st.session_state.editable_df.at[selected_index, 'Rate'])
+    quantity = st.sidebar.number_input('Quantity', value=st.session_state.editable_df.at[selected_index, 'Quantity'])
 
-# Function to plot the progression chart
-def display_progression_chart(current_progression):
-    plt.figure(figsize=(10, 4))
-    months = list(range(1, 13))  # Months from January to December
-    progression = [current_progression * (month / 12) for month in months]
-    
-    plt.plot(months, progression, marker='o')
-    plt.title('Invoice Progression Chart')
-    plt.xlabel('Month')
-    plt.ylabel('Invoicing (USD)')
-    plt.grid(True)
-    st.pyplot(plt)
+    # Update the DataFrame and recalculate if changes are detected
+    if rate != st.session_state.editable_df.at[selected_index, 'Rate'] or quantity != st.session_state.editable_df.at[selected_index, 'Quantity']:
+        st.session_state.editable_df.at[selected_index, 'Rate'] = rate
+        st.session_state.editable_df.at[selected_index, 'Quantity'] = quantity
 
-# Allow user to select role and seniority to update rate and quantity
-selected_role = st.sidebar.selectbox('Role', df['Role'].unique(), key='role')
-selected_seniority = st.sidebar.selectbox('Seniority', df['Seniority'].unique(), key='seniority')
+# Calculate the total invoice amount and forecast
+total_invoice_amount = (st.session_state.editable_df['Rate'] * st.session_state.editable_df['Quantity']).sum()
+current_month = pd.Timestamp.now().month
+monthly_invoice = total_invoice_amount / current_month
+forecast = monthly_invoice * (12 - current_month)
 
-# Determine the current rate and quantity
-selected_index = df[(df['Role'] == selected_role) & (df['Seniority'] == selected_seniority)].index
-st.session_state['index'] = selected_index[0]
-current_rate = df.loc[selected_index, 'Rate'].values[0]
-current_quantity = df.loc[selected_index, 'Quantity'].values[0]
+st.metric(label='Total Invoice Amount', value=f"${total_invoice_amount:,.2f}")
+st.metric(label='Forecast for the Rest of the Year', value=f"${forecast:,.2f}")
 
-# Display the current values to user and allow for editing
-if 'update_values' not in st.session_state:
-    st.sidebar.button('Update Values', on_click=update_values)
-
-# Show the invoice amount and forecast
-if 'total_invoice_amount' in st.session_state:
-    st.metric(label='Total Invoice Amount', value=f"${st.session_state['total_invoice_amount']:,.2f}")
-if 'forecast' in st.session_state:
-    st.metric(label='Forecast for the Rest of the Year', value=f"${st.session_state['forecast']:,.2f}")
-
-# Show the main DataFrame table
 st.subheader("Resource Rates and Quantities")
-st.dataframe(st.session_state['editable_df'].style.format({'Rate': "${:.2f}", 'Quantity': "{:.0f}"}))
+st.table(st.session_state.editable_df.style.format({'Rate': "${:.2f}", 'Quantity': "{:.0f}"}))
 
-# Display chart for progression if available
-if 'invoice_progression' in st.session_state:
-    display_progression_chart(st.session_state['invoice_progression'])
+# Plotting the progression chart
+plt.figure(figsize=(10, 4))
+months = list(range(1, 13)) # Months from January to December
+progression = [monthly_invoice * month for month in months]
+
+plt.plot(months, progression, marker='o')
+plt.title('Invoicing Progression Over the Year')
+plt.xlabel('Month')
+plt.ylabel('Cumulative Invoicing (USD)')
+plt.grid(True)
+st.pyplot(plt)  # Fixes issue of plotting twice by only calling plt once
